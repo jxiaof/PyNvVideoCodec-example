@@ -7,12 +7,9 @@ import logging
 import os
 from PIL import Image, ImageDraw, ImageFont
 import subprocess
-import json
 import asyncio
 import io
 import aiofiles
-
-import torch.nn.functional as F
 
 class VideoDecoder:
     def __init__(self, codec=nvc.cudaVideoCodec.H264, gpuid=0, usedevicememory=True):
