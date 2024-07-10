@@ -10,6 +10,7 @@ import subprocess
 import asyncio
 import io
 import aiofiles
+import json
 
 class VideoDecoder:
     def __init__(self, codec=nvc.cudaVideoCodec.H264, gpuid=0, usedevicememory=True):
@@ -229,12 +230,30 @@ async def async_process(video_decoder, video_encoder, output_file):
     except Exception as e:
         logging.error(f'Error during encoding: {e}', exc_info=True)
         return
+    
+def get_video_info(video_path):
+    cmd = [
+        'ffprobe',
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=width,height,duration',
+        '-of', 'json',
+        video_path
+    ]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    info = json.loads(result.stdout)
+    width = info['streams'][0]['width']
+    height = info['streams'][0]['height']
+    duration = float(info['streams'][0]['duration'])
+    return width, height, duration
+
+
 
 def test():
-    input_file = 'input2.mp4'
-    output_file = 'output2.h264'
-    audio_file = 'audio2.mp3'
-    mp4_output_file = 'output_17s.mp4'
+    input_file = 'input3.mp4'
+    output_file = 'output3.h264'
+    audio_file = 'audio3.mp3'
+    mp4_output_file = 'output_long_video.mp4'
     
     try:
         t0 = time.time()
@@ -247,9 +266,10 @@ def test():
     
     video_decoder = VideoDecoder()
     video_decoder.initialize(input_file)
+    width, height, duration = get_video_info(input_file)
+    logging.info(f'Width: {width}, Height: {height}, Duration: {duration}')
     
-    video_encoder = VideoEncoder(width=1080, height=1920, format="NV12", use_cpu_input_buffer=True, codec="h264", bitrate=4000000, fps=30)
-    # video_encoder = VideoEncoder(width=720, height=1280, format="NV12", use_cpu_input_buffer=False, codec="h264", bitrate=4000000, fps=30)
+    video_encoder = VideoEncoder(width=width, height=height, format="NV12", use_cpu_input_buffer=False, codec="h264", bitrate=4000000, fps=30)
     
     process(video_decoder, video_encoder, output_file)
     # asyncio.run(async_process(video_decoder, video_encoder, output_file))
@@ -272,3 +292,13 @@ if __name__ == "__main__":
     test()
     t1 = time.time()
     print(f"Encoding finished in {t1-t0} s")
+
+
+"""
+Width: 720, Height: 1280, Duration: 150.2
+INFO:root:--------------> ffmpeg extract audio in 2.09 s
+INFO:root:--------------> ffmpeg merge h264 to mp4 in 6.04 s
+Encoding finished, output saved to output_long_video.mp4
+Session Deinitialization Time: 109 ms 
+Encoding finished in 28.431639671325684 s
+"""
