@@ -240,29 +240,28 @@ def test():
     mp4_output_file = 'output_17s.mp4'
     
     try:
+        t0 = time.time()
         os.system(f'ffmpeg -y -i {input_file} -vn -acodec libmp3lame {audio_file}')
+        t1 = time.time()
+        logging.info(f'--------------> ffmpeg extract audio in {t1-t0 :.2f} s')
     except Exception as e:
         logging.error(f'Error extracting audio: {e}', exc_info=True)
         return
     
-    try:
-        video_decoder = VideoDecoder()
-        video_decoder.initialize(input_file)
-    except Exception as e:
-        logging.error(f'Error initializing video decoder: {e}', exc_info=True)
-        return
+    video_decoder = VideoDecoder()
+    video_decoder.initialize(input_file)
     
-    try:
-        video_encoder = VideoEncoder(width=1080, height=1920, format="NV12", use_cpu_input_buffer=True, codec="h264", bitrate=4000000, fps=30)
-        # video_encoder = VideoEncoder(width=720, height=1280, format="NV12", use_cpu_input_buffer=False, codec="h264", bitrate=4000000, fps=30)
-    except Exception as e:
-        logging.error(f'Error initializing video encoder: {e}', exc_info=True)
-        return
+    video_encoder = VideoEncoder(width=1080, height=1920, format="NV12", use_cpu_input_buffer=True, codec="h264", bitrate=4000000, fps=30)
+    # video_encoder = VideoEncoder(width=720, height=1280, format="NV12", use_cpu_input_buffer=False, codec="h264", bitrate=4000000, fps=30)
+    
     process(video_decoder, video_encoder, output_file)
     # asyncio.run(async_process(video_decoder, video_encoder, output_file))
 
     try:
+        t0 = time.time()
         os.system(f'ffmpeg -y -i {output_file} -i {audio_file} -c:v copy -c:a aac -fflags +genpts -r 30 -movflags +faststart {mp4_output_file}')
+        t1 = time.time()
+        logging.info(f'--------------> ffmpeg merge h264 to mp4 in {t1-t0 :.2f} s')
     except Exception as e:
         logging.error(f'Error merging video and audio: {e}', exc_info=True)
         return
